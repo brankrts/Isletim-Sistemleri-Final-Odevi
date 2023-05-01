@@ -1,0 +1,9 @@
+uygulamalar:
+A.exe 10 ekran 7 ethernet 9
+B.com 8 disk 4 ekran 6
+hesapla.exe 12
+olaylar:
+run hesapla.exe 1
+run A.exe 3
+run B.com 13
+
