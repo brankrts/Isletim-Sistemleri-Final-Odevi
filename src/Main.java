@@ -5,13 +5,20 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws FileNotFoundException, InterruptedException {
         List<String> inputTxt = new ArrayList<String>();
         List<String> applications = new ArrayList<String>();
         List<String> events = new ArrayList<String>();
         List<EventModel> eventModels = new ArrayList<EventModel>();
         List<ProgramModel> programModels = new ArrayList<ProgramModel>();
         Scanner fileScanner = new Scanner(new File(Constants.fileName));
+
+        CustomQueue<PCB> readyQueue = new CustomQueue<PCB>();
+        CustomQueue<PCB> screenQueue = new CustomQueue<PCB>();
+        CustomQueue<PCB> ethernetQueue = new CustomQueue<PCB>();
+        CustomQueue<PCB> diskQueue = new CustomQueue<PCB>();
+
+        QueueModel queueModel = new QueueModel(readyQueue, screenQueue, ethernetQueue, diskQueue);
 
         while (fileScanner.hasNext()) {
 
@@ -42,9 +49,10 @@ public class Main {
             programModels.add(new ProgramModel(programName, commandCount, subProcesses));
 
         }
-        for (ProgramModel model : programModels) {
-            System.out.println(model.programName + " " + model.commandCount + " " + model.subProcesses.size());
-        }
+
+        Cpu cpu = new Cpu(programModels, eventModels, queueModel, 20, "A.exe");
+
+        cpu.start();
 
     }
 

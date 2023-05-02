@@ -1,5 +1,6 @@
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +11,7 @@ public class PCB {
     private int processID;
     private StatusEnum processStatus;
     private int programCounter;
-    private Date createdAt;
+    private Instant createdAt;
     private int cpuUsage;
     private boolean isNotSlice;
     private String processName;
@@ -22,7 +23,7 @@ public class PCB {
     private CustomQueue<PCB> diskQueue;
     private CustomQueue<PCB> screenQueue;
     private CustomQueue<PCB> ethernetQueue;
-    private CustomQueue<SubProcess> subProcessQueue;
+    private CustomQueue<SubProcess> subProcessQueue = new CustomQueue<SubProcess>();
     private Map<String, CustomQueue<PCB>> queueMap;
 
     public PCB(ProgramModel model, QueueModel queueModel) {
@@ -31,7 +32,7 @@ public class PCB {
         this.processStatus = StatusEnum.New;
         this.programCounter = 1;
         this.timeSlice = 0;
-        this.createdAt = new Date();
+        this.createdAt = Instant.now();
         this.cpuUsage = 0;
         this.processName = model.programName;
         this.commandCount = model.commandCount;
@@ -65,36 +66,39 @@ public class PCB {
         SubProcess subProcess = this.subProcessQueue.pop();
 
         if (isNotSlice) {
+
             this.processStatus = StatusEnum.Running;
 
             while (this.commandCount >= this.programCounter) {
+                if (subProcess != null) {
+                    if (subProcess.getSubProcessActivateTime() == programCounter) {
 
-                if (subProcess.getSubProcessActivateTime() == commandCount) {
+                        PcpThread subprocessThread = new PcpThread(
+                                () -> {
+                                    this.queueMap.get(subProcess.getSubProcessName()).push(this);
+                                    this.processStatus = StatusEnum.Waiting;
+                                    try {
+                                        Thread.sleep(3000);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                    this.queueMap.get(subProcess.getSubProcessName()).pop();
+                                    this.readyQueue.push(this);
+                                    this.processStatus = StatusEnum.Ready;
 
-                    PcpThread subprocessThread = new PcpThread(
-                            () -> {
-                                this.queueMap.get(subProcess.getSubProcessName()).push(this);
-                                this.processStatus = StatusEnum.Waiting;
-                                try {
-                                    Thread.sleep(3000);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                                this.queueMap.get(subProcess.getSubProcessName()).pop();
-                                this.readyQueue.push(this);
-                                this.processStatus = StatusEnum.Ready;
+                                });
+                        subprocessThread.start();
 
-                            });
-                    subprocessThread.start();
+                        return false;
 
-                    return false;
+                    }
 
                 }
+
+                Thread.sleep(1000);
                 this.incrementCpuUsage();
                 this.incrementProgramCounter();
                 this.incrementTimeSlice();
-
-                Thread.sleep(1000);
 
                 this.isNotSlice = this.timeSlice == 5 ? false : true;
                 if (!this.isNotSlice) {
@@ -116,7 +120,7 @@ public class PCB {
         return this.processID;
     }
 
-    public Date getCratedAt() {
+    public Instant getCratedAt() {
         return this.createdAt;
     }
 
@@ -171,6 +175,16 @@ public class PCB {
 
     public void setSlice() {
         this.isNotSlice = false;
+    }
+
+    public String getProcessInformation(int time) {
+
+        return "A.exe isimli prosesin " + time + "." + "Saniyedeki PCB bilgileri su sekildedir:\nProses numarasi: "
+                + this.getProcessID() + "\nProsess durumu: " + this.getStatus().name() + "\nProgram sayaci: "
+                + this.getProgramCounter() + "\nKullanilan CPU miktari: " + this.getCpuUsage() + " saniye\n"
+                + "Prosesin yaratilmasindan itibaren gecen sure: "
+                + Duration.between(this.createdAt, Instant.now()).getSeconds() + " saniye";
+
     }
 
 }
