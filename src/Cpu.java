@@ -1,49 +1,79 @@
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.ObjectInputFilter.Status;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Scanner;
 
 public class Cpu {
-    public static void main(String[] args) throws FileNotFoundException {
-        List<String> inputTxt = new ArrayList<String>();
-        List<String> applications = new ArrayList<String>();
-        List<String> events = new ArrayList<String>();
-        List<EventModel> eventModels = new ArrayList<EventModel>();
-        List<ProgramModel> programModels = new ArrayList<ProgramModel>();
-        Scanner fileScanner = new Scanner(new File(Constants.fileName));
 
-        while (fileScanner.hasNext()) {
+    private List<ProgramModel> programModels;
+    private List<EventModel> eventModels;
+    private QueueModel queueModel;
+    static int systemTime = 0;
+    private CustomQueue<EventModel> jobQueue;
+    private List<PCB> activePcbs = new ArrayList<PCB>();
 
-            inputTxt.add(fileScanner.nextLine());
+    public Cpu(List<ProgramModel> programModels, List<EventModel> eventModels, QueueModel queueModel) {
+        this.programModels = programModels;
+        this.eventModels = eventModels;
+        this.queueModel = queueModel;
+        this.sortEvents();
+
+    }
+
+    public void start() throws InterruptedException {
+
+        while (this.jobQueue.length() != 0) {
+
+            EventModel event = jobQueue.peek();
+
+            if (event.activationTime == systemTime) {
+
+                this.jobQueue.pop();
+
+                for (ProgramModel model : this.programModels) {
+
+                    if (model.programName == event.eventName) {
+                        PCB newPcb = new PCB(model, queueModel);
+                        this.queueModel.readQueue.push(newPcb);
+                        this.activePcbs.add(newPcb);
+                    }
+
+                }
+            }
         }
-        int applicationsIndex = inputTxt.indexOf(Constants.applications);
-        int eventIndex = inputTxt.indexOf(Constants.events);
 
-        applications = inputTxt.subList(applicationsIndex + 1, eventIndex);
-        events = inputTxt.subList(eventIndex + 1, inputTxt.size());
+        while (true) {
 
-        for (String event : events) {
-            String[] parsingEvent = event.split(" ");
-            eventModels.add(new EventModel(parsingEvent[1], Integer.parseInt(parsingEvent[2])));
-        }
+            if (this.queueModel.readQueue.length() != 0) {
+                PCB currentProcess = this.queueModel.readQueue.pop();
+                boolean currentProcessState = currentProcess.start();
 
-        for (String application : applications) {
-            String[] parsingApplication = application.split(" ");
-            String programName = parsingApplication[0];
-            int commandCount = Integer.parseInt(parsingApplication[1]);
-            List<SubProcess> subProcesses = new ArrayList<SubProcess>();
+                if (!currentProcessState & currentProcess.getStatus() == StatusEnum.Terminated) {
+                    this.activePcbs.removeIf(p -> p.getStatus() == StatusEnum.Terminated);
+                } else
+                    continue;
 
-            for (int i = 2; i < parsingApplication.length; i += 2) {
-
-                subProcesses.add(new SubProcess(parsingApplication[i], Integer.parseInt(parsingApplication[i + 1])));
             }
 
-            programModels.add(new ProgramModel(programName, commandCount, subProcesses));
-
         }
-        for (ProgramModel model : programModels) {
-            System.out.println(model.programName + " " + model.commandCount + " " + model.subProcesses.size());
+
+    }
+
+    static void incrementSystemTime() {
+
+        systemTime++;
+    }
+
+    private void sortEvents() {
+        Comparator<EventModel> sortByEventActivationTime = new Comparator<EventModel>() {
+            public int compare(EventModel e1, EventModel e2) {
+                return e1.activationTime - e2.activationTime;
+            }
+        };
+        this.eventModels.sort(sortByEventActivationTime);
+        for (EventModel eventModel : this.eventModels) {
+            this.jobQueue.push(eventModel);
+
         }
 
     }

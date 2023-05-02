@@ -15,6 +15,7 @@ public class PCB {
     private boolean isNotSlice;
     private String processName;
     private int commandCount;
+    private int timeSlice;
 
     private List<SubProcess> subProcesses;
     private CustomQueue<PCB> readyQueue;
@@ -29,6 +30,7 @@ public class PCB {
         this.processID = new Random().nextInt(10000);
         this.processStatus = StatusEnum.New;
         this.programCounter = 1;
+        this.timeSlice = 0;
         this.createdAt = new Date();
         this.cpuUsage = 0;
         this.processName = model.programName;
@@ -56,7 +58,7 @@ public class PCB {
         }
     }
 
-    public void start() throws InterruptedException {
+    public boolean start() throws InterruptedException {
 
         this.isNotSlice = true;
 
@@ -69,22 +71,44 @@ public class PCB {
 
                 if (subProcess.getSubProcessActivateTime() == commandCount) {
 
-                    this.queueMap.get(subProcess.getSubProcessName()).push(this);
-                    this.processStatus = StatusEnum.Waiting;
-                    Thread.sleep(3000);
-                    this.queueMap.get(subProcess.getSubProcessName()).pop();
-                    this.readyQueue.push(this);
-                    this.processStatus = StatusEnum.Ready;
-                    break;
+                    PcpThread subprocessThread = new PcpThread(
+                            () -> {
+                                this.queueMap.get(subProcess.getSubProcessName()).push(this);
+                                this.processStatus = StatusEnum.Waiting;
+                                try {
+                                    Thread.sleep(3000);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                this.queueMap.get(subProcess.getSubProcessName()).pop();
+                                this.readyQueue.push(this);
+                                this.processStatus = StatusEnum.Ready;
+
+                            });
+                    subprocessThread.start();
+
+                    return false;
 
                 }
                 this.incrementCpuUsage();
                 this.incrementProgramCounter();
+                this.incrementTimeSlice();
+
                 Thread.sleep(1000);
 
+                this.isNotSlice = this.timeSlice == 5 ? false : true;
+                if (!this.isNotSlice) {
+                    this.readyQueue.push(this);
+                    this.timeSlice = 0;
+                    return false;
+                }
+                return true;
+
             }
-            this.processStatus = StatusEnum.Terminated;
+
         }
+        this.processStatus = StatusEnum.Terminated;
+        return false;
 
     }
 
@@ -122,6 +146,10 @@ public class PCB {
 
     public void incrementProgramCounter() {
         this.programCounter++;
+    }
+
+    public void incrementTimeSlice() {
+        this.timeSlice++;
     }
 
     public void incrementCpuUsage() {

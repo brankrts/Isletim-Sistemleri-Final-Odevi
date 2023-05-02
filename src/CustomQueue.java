@@ -1,6 +1,7 @@
 import java.util.LinkedList;
 import java.util.Queue;
 
+
 public class CustomQueue<T> {
 
     private Queue<T> queue;
@@ -31,6 +32,10 @@ public class CustomQueue<T> {
         }
         return null;
 
+    }
+
+    public T peek() {
+        return this.queue.peek();
     }
 
     public Queue<T> getQueue() {

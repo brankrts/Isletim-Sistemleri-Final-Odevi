@@ -1,21 +1,16 @@
 public class PcpThread extends Thread {
 
-    private PCB pcb;
+    private Runnable function;
 
-    public PcpThread(PCB pcb) {
+    public PcpThread(Runnable function) {
 
-        this.pcb = pcb;
+        this.function = function;
 
     }
 
     public void run() {
 
-        try {
-            this.pcb.start();
-        } catch (InterruptedException e) {
-
-            e.printStackTrace();
-        }
+        this.function.run();
     }
 
 }
