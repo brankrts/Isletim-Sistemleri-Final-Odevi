@@ -4,4 +4,8 @@ public class Constants {
     static String applications = "uygulamalar:";
     static String events = "olaylar:";
 
+    static volatile boolean isContinue = false;
+    static volatile boolean isSystemActive = true;
+    static volatile String workingOnCpu = "";
+
 }

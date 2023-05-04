@@ -1,5 +1,4 @@
-import java.time.Duration;
-import java.time.Instant;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -11,7 +10,7 @@ public class PCB {
     private int processID;
     private StatusEnum processStatus;
     private int programCounter;
-    private Instant createdAt;
+    private int createdAt;
     private int cpuUsage;
     private boolean isNotSlice;
     private String processName;
@@ -26,13 +25,13 @@ public class PCB {
     private CustomQueue<SubProcess> subProcessQueue = new CustomQueue<SubProcess>();
     private Map<String, CustomQueue<PCB>> queueMap;
 
-    public PCB(ProgramModel model, QueueModel queueModel) {
+    public PCB(ProgramModel model, QueueModel queueModel, int createdAt) {
 
         this.processID = new Random().nextInt(10000);
         this.processStatus = StatusEnum.New;
         this.programCounter = 1;
         this.timeSlice = 0;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
         this.cpuUsage = 0;
         this.processName = model.programName;
         this.commandCount = model.commandCount;
@@ -59,24 +58,42 @@ public class PCB {
         }
     }
 
-    public boolean start() throws InterruptedException {
+    public void start() throws InterruptedException {
 
         this.isNotSlice = true;
-
-        SubProcess subProcess = this.subProcessQueue.pop();
+        SubProcess subProcess = this.subProcessQueue.peek();
 
         if (isNotSlice) {
 
-            this.processStatus = StatusEnum.Running;
+            while (this.commandCount >= this.programCounter & Constants.isSystemActive) {
+                Constants.workingOnCpu = this.getProcessName();
+                this.isNotSlice = this.timeSlice == 5 ? false : true;
+                if (this.isNotSlice == false) {
+                    this.readyQueue.push(this);
+                    this.timeSlice = 0;
+                    Constants.isContinue = false;
+                    break;
+                }
+                Thread.sleep(1000);
+                this.incrementCpuUsage();
+                this.incrementProgramCounter();
+                this.incrementTimeSlice();
 
-            while (this.commandCount >= this.programCounter) {
+                if (this.getProcessName().equals("A.exe")) {
+                    System.out.println("\n\n************************************************************");
+                    System.out.println(
+                            "Program Counter: " + this.getProgramCounter() + " CPU Usage : " + this.getCpuUsage());
+                    System.out.println("************************************************************\n");
+                }
+
                 if (subProcess != null) {
-                    if (subProcess.getSubProcessActivateTime() == programCounter) {
-
+                    if (subProcess.getSubProcessActivateTime() == this.getCpuUsage()) {
                         PcpThread subprocessThread = new PcpThread(
                                 () -> {
+                                    this.subProcessQueue.pop();
                                     this.queueMap.get(subProcess.getSubProcessName()).push(this);
                                     this.processStatus = StatusEnum.Waiting;
+
                                     try {
                                         Thread.sleep(3000);
                                     } catch (InterruptedException e) {
@@ -88,31 +105,32 @@ public class PCB {
 
                                 });
                         subprocessThread.start();
+                        Constants.isContinue = false;
 
-                        return false;
-
+                        Constants.workingOnCpu = "";
+                        break;
                     }
 
                 }
 
-                Thread.sleep(1000);
-                this.incrementCpuUsage();
-                this.incrementProgramCounter();
-                this.incrementTimeSlice();
-
                 this.isNotSlice = this.timeSlice == 5 ? false : true;
-                if (!this.isNotSlice) {
+                if (this.isNotSlice == false) {
                     this.readyQueue.push(this);
                     this.timeSlice = 0;
-                    return false;
+                    Constants.isContinue = false;
+                    break;
                 }
-                return true;
+
+                Constants.isContinue = true;
 
             }
 
         }
-        this.processStatus = StatusEnum.Terminated;
-        return false;
+        if (this.programCounter > this.commandCount) {
+
+            this.processStatus = StatusEnum.Terminated;
+            Constants.isContinue = false;
+        }
 
     }
 
@@ -120,7 +138,7 @@ public class PCB {
         return this.processID;
     }
 
-    public Instant getCratedAt() {
+    public int getCratedAt() {
         return this.createdAt;
     }
 
@@ -179,11 +197,12 @@ public class PCB {
 
     public String getProcessInformation(int time) {
 
-        return "A.exe isimli prosesin " + time + "." + "Saniyedeki PCB bilgileri su sekildedir:\nProses numarasi: "
+        return "\n" + this.getProcessName() + " isimli prosesin " + time + "."
+                + "Saniyedeki PCB bilgileri su sekildedir:\nProses numarasi: "
                 + this.getProcessID() + "\nProsess durumu: " + this.getStatus().name() + "\nProgram sayaci: "
                 + this.getProgramCounter() + "\nKullanilan CPU miktari: " + this.getCpuUsage() + " saniye\n"
                 + "Prosesin yaratilmasindan itibaren gecen sure: "
-                + Duration.between(this.createdAt, Instant.now()).getSeconds() + " saniye";
+                + (Cpu.getSystemTime() - this.getCratedAt() - 1) + " saniye";
 
     }
 

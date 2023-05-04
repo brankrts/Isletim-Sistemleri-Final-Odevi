@@ -1,7 +1,6 @@
 import java.util.LinkedList;
 import java.util.Queue;
 
-
 public class CustomQueue<T> {
 
     private Queue<T> queue;
@@ -25,7 +24,7 @@ public class CustomQueue<T> {
     }
 
     public T pop() {
-        
+
         if (this.queue.size() != 0) {
 
             return this.queue.remove();

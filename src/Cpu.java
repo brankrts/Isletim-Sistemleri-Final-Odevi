@@ -8,11 +8,13 @@ public class Cpu {
     private List<ProgramModel> programModels;
     private List<EventModel> eventModels;
     private QueueModel queueModel;
-    private static int systemTime = 0;
+    public static volatile int systemTime;
     private CustomQueue<EventModel> jobQueue = new CustomQueue<EventModel>();
     private List<PCB> activePcbs = new ArrayList<PCB>();
-    private boolean isSystemActive = true;
+    private List<PCB> pcbList = new ArrayList<PCB>();
+    private volatile boolean isSystemActive = true;
     private int systemStopTime;
+    private int processCount;
     private String targetProcess;
 
     public Cpu(List<ProgramModel> programModels, List<EventModel> eventModels, QueueModel queueModel,
@@ -22,86 +24,127 @@ public class Cpu {
         this.programModels = programModels;
         this.eventModels = eventModels;
         this.queueModel = queueModel;
+        this.processCount = eventModels.size();
         this.sortEvents();
 
     }
 
+    private void init() {
+        systemTime = 0;
+    }
+
     public void start() throws InterruptedException {
+        init();
+        this.startSystemTime();
+        this.processingJobQueue();
+        this.processingReadyQueue();
+    }
+
+    private void startSystemTime() throws InterruptedException {
         PcpThread systemTimeCounter = new PcpThread(() -> {
-            while (systemTime != this.systemStopTime) {
+            while (getSystemTime() <= this.systemStopTime) {
+
+                incrementSystemTime();
+                if (getSystemTime() <= this.systemStopTime) {
+                    System.out
+                            .println(
+                                    "\nSystem time : " + getSystemTime() + " and  Jobqueue length : "
+                                            + this.getJobQueue().length());
+                }
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
 
                     e.printStackTrace();
                 }
-
-                incrementSystemTime();
-                System.out.println("System time : " + systemTime);
 
             }
             this.isSystemActive = false;
+            Constants.isSystemActive = false;
+            // Thread.getAllStackTraces().keySet().forEach(Thread::interrupt);
+
         });
         systemTimeCounter.start();
 
+    }
+
+    private void processingJobQueue() {
+
         PcpThread cpuJobQueueThread = new PcpThread(() -> {
+            while (this.getJobQueue().length() > 0 & Constants.isSystemActive) {
 
-            while (this.jobQueue.length() != 0 & isSystemActive) {
+                EventModel currentEvent = this.getJobQueue().peek();
+                System.out.println("CPU aktarimina uygun mu ? " + (getSystemTime() == currentEvent.activationTime));
 
-                EventModel event = this.jobQueue.peek();
+                if (getSystemTime() == currentEvent.activationTime) {
 
-                if (event.activationTime == systemTime) {
-
-                    EventModel currentEvent = this.jobQueue.pop();
-
+                    currentEvent = this.getJobQueue().pop();
                     for (ProgramModel model : this.programModels) {
 
                         if (model.programName.equals(currentEvent.eventName)) {
-                            PCB newPcb = new PCB(model, queueModel);
+                            PCB newPcb = new PCB(model, queueModel, getSystemTime());
                             this.queueModel.readQueue.push(newPcb);
                             this.activePcbs.add(newPcb);
+                            this.pcbList.add(newPcb);
                         }
 
                     }
-                }
 
+                }
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
-
                     e.printStackTrace();
                 }
 
             }
-
         });
         cpuJobQueueThread.start();
 
-        while (isSystemActive) {
-            boolean currentProcessState = true;
+    }
 
-            if (this.queueModel.readQueue.length() != 0 ) {
+    private void processingReadyQueue() {
+
+        int isDone = 0;
+        while (getIsSystemActive()) {
+            isDone = 0;
+
+            for (PCB pcb : this.pcbList) {
+                if (pcb.getStatus() == StatusEnum.Terminated) {
+                    isDone++;
+                }
+
+            }
+            if (isDone == this.processCount & this.queueModel.readQueue.length() == 0)
+                break;
+
+            if (this.queueModel.readQueue.length() <= 0) {
+                continue;
+            }
+
+            if (Constants.isContinue == false) {
+
                 PCB currentProcess = this.queueModel.readQueue.pop();
 
                 try {
-                    System.out.println(currentProcess.getProcessName());
-                    currentProcessState = currentProcess.start();
+                    Constants.workingOnCpu = currentProcess.getProcessName();
+                    System.out.println("\n\n----------------------------------------");
+                    System.out.println("CPU'ya aktarilan process --> " + currentProcess.getProcessName());
+                    System.out.println("----------------------------------------\n");
+                    currentProcess.setStatus(StatusEnum.Running);
+                    currentProcess.start();
+
                 } catch (InterruptedException e) {
 
                     e.printStackTrace();
                 }
 
-                if (!currentProcessState & currentProcess.getStatus() == StatusEnum.Terminated) {
+                if (Constants.isContinue == false && currentProcess.getStatus() == StatusEnum.Terminated) {
                     this.activePcbs.removeIf(p -> p.getStatus() == StatusEnum.Terminated);
-                    continue;
-                } else {
-
-                    this.queueModel.readQueue.push(currentProcess);
-                    continue;
                 }
 
             }
-            // incrementSystemTime();
+
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -109,28 +152,33 @@ public class Cpu {
                 e.printStackTrace();
             }
 
-            if (this.activePcbs.size() == 0 & systemTime > 5) {
-
-                break;
-            }
-
         }
 
-        for (PCB activePcb : this.activePcbs) {
-            if (activePcb != null) {
+        for (PCB pcb : this.pcbList) {
+            if (pcb.getProcessName().equals(this.targetProcess)) {
+                System.out.println(pcb.getProcessInformation(this.systemStopTime) + "\n");
 
-                if (activePcb.getProcessName().equals(this.targetProcess)) {
-                    System.out.println("Girdi");
-                    System.out.println(activePcb.getProcessInformation(systemStopTime));
-                }
             }
         }
+        this.queueInformation();
 
     }
 
-    static void incrementSystemTime() {
+    static synchronized void incrementSystemTime() {
 
         systemTime++;
+    }
+
+    static synchronized int getSystemTime() {
+        return systemTime;
+    }
+
+    private synchronized CustomQueue<EventModel> getJobQueue() {
+        return this.jobQueue;
+    }
+
+    private synchronized boolean getIsSystemActive() {
+        return this.isSystemActive;
     }
 
     private void sortEvents() {
@@ -143,10 +191,36 @@ public class Cpu {
         this.eventModels.sort(sortByEventActivationTime);
 
         for (EventModel eventModel : this.eventModels) {
-            this.jobQueue.push(eventModel);
+            this.getJobQueue().push(eventModel);
 
         }
+        // System.out.println("Job queue is sorted done !");
 
+    }
+
+    private String getProcessOnQueue(CustomQueue<PCB> queue, String queueName) {
+        String processes = " ";
+        for (PCB pcb : queue.getQueue()) {
+            processes += pcb.getProcessName() + " ";
+
+        }
+        return queueName + processes;
+
+    }
+
+    private void queueInformation() {
+        String currentPCBs = "";
+        for (PCB pcb : this.activePcbs) {
+            currentPCBs += pcb.getProcessName() + " ";
+        }
+        String information = "Cpu'da calisan proses: " + Constants.workingOnCpu + "\n"
+                + this.getProcessOnQueue(this.queueModel.readQueue, "Ready kuyrugu") + "\n"
+                + this.getProcessOnQueue(this.queueModel.screenQueue, "Ekran kuyrugu") + "\n"
+                + this.getProcessOnQueue(this.queueModel.diskQueue, "Disk kuyrugu") + "\n"
+                + this.getProcessOnQueue(this.queueModel.ethernetQueue, "Ethernet kuyrugu")
+                + "\nPCB'si bulunan Prosesler " + currentPCBs;
+
+        System.out.println(information);
     }
 
 }
