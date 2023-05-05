@@ -37,23 +37,23 @@ Dersimizin 3. Hafta sunumu sayfa 8’de bulunan resme uygun olarak, bir olay ger
 # 10. 
 Programınız çalıştığında kullanıcıya sistemin durumunu görmek istediği saniyeyi soracaktır. Kullanıcı saniyeyi girdikten sonra, program o saniyedeki sistemin durumu hakkındaki bilgileri ekrana çıktı olarak verecektir. Daha sonra, programınız kullanıcıya ilgili saniyedeki PCB’sini görüntülemek istediği proses ismini soracaktır ve ismi girilen prosesin ilgili saniyedeki PCB bilgilerini ekrana çıktı olarak verecektir. (Örnek bir ekran görüntüsü aşağıda verilmiştir. Sizin uygulamanızın da aynı formatta ekrana çıktı üretmesi gerekmektedir. Formatı ve ekrandaki mesajların sırasını değiştirmeyiniz.
 # 11 Ornek girdi 
-Sistem saniyesi : 20  
-Bilgileri edinilecek proses : A.exe
+- Sistem saniyesi : 20  
+- Bilgileri edinilecek proses : A.exe
 
 # 12. Beklenen cikti
-girdi.txt dosyası okundu. 
-Lütfen sistemin durumunu görmek istediğiniz saniyeyi giriniz. 20 
-CPU’da çalışan proses: B.com 
-Ready kuyruğu: hesapla.exe 
-Ekran kuyruğu: A.exe 
-Disk kuyruğu: 
-Ethernet kuyruğu: 
-PCB’si bulunan Prosesler: hesapla.exe A.exe B.com 
+- girdi.txt dosyası okundu. 
+- Lütfen sistemin durumunu görmek istediğiniz saniyeyi giriniz. 20 
+- CPU’da çalışan proses: B.com 
+- Ready kuyruğu: hesapla.exe 
+- Ekran kuyruğu: A.exe 
+- Disk kuyruğu: 
+- Ethernet kuyruğu: 
+- PCB’si bulunan Prosesler: hesapla.exe A.exe B.com 
 
-20. saniyedeki PCB’sini görüntülemek istediğiniz proses ismini giriniz: A.exe 
-A.exe isimli prosesin 20. Saniyedeki PCB bilgileri şu şekildedir: 
-Proses numarası: 1000 
-Proses durumu: waiting 
-Program sayacı: 8
-Kullanılan CPU miktarı: 7 saniye 
-Prosesin yaratılmasından itibaren geçen süre: 17 saniye
+- 20. saniyedeki PCB’sini görüntülemek istediğiniz proses ismini giriniz: A.exe 
+- A.exe isimli prosesin 20. Saniyedeki PCB bilgileri şu şekildedir: 
+- Proses numarası: 1000 
+- Proses durumu: waiting 
+- Program sayacı: 8
+- Kullanılan CPU miktarı: 7 saniye 
+- Prosesin yaratılmasından itibaren geçen süre: 17 saniye
