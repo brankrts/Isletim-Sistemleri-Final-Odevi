@@ -14,13 +14,13 @@ public class Cpu {
     private List<PCB> pcbList = new ArrayList<PCB>();
     private volatile boolean isSystemActive = true;
     private int systemStopTime;
-    private int processCount;
     private String targetProcess;
+    private int processCount;
 
     public Cpu(List<ProgramModel> programModels, List<EventModel> eventModels, QueueModel queueModel,
             int systemStopTime, String targetProcess) {
-        this.targetProcess = targetProcess;
         this.systemStopTime = systemStopTime;
+        this.targetProcess = targetProcess;
         this.programModels = programModels;
         this.eventModels = eventModels;
         this.queueModel = queueModel;
@@ -115,9 +115,11 @@ public class Cpu {
                 }
 
             }
-            if (isDone == this.processCount & this.queueModel.readQueue.length() == 0)
+            if (isDone == this.processCount & this.queueModel.readQueue.length() == 0) {
+                Constants.workingOnCpu = "";
                 break;
 
+            }
             if (this.queueModel.readQueue.length() <= 0) {
                 continue;
             }
@@ -141,6 +143,7 @@ public class Cpu {
 
                 if (Constants.isContinue == false && currentProcess.getStatus() == StatusEnum.Terminated) {
                     this.activePcbs.removeIf(p -> p.getStatus() == StatusEnum.Terminated);
+
                 }
 
             }
@@ -154,13 +157,19 @@ public class Cpu {
 
         }
 
+        this.queueInformation();
+        this.processInformation(this.targetProcess);
+
+    }
+
+    public void processInformation(String process) {
+
         for (PCB pcb : this.pcbList) {
-            if (pcb.getProcessName().equals(this.targetProcess)) {
+            if (pcb.getProcessName().equals(process)) {
                 System.out.println(pcb.getProcessInformation(this.systemStopTime) + "\n");
 
             }
         }
-        this.queueInformation();
 
     }
 
@@ -214,11 +223,11 @@ public class Cpu {
             currentPCBs += pcb.getProcessName() + " ";
         }
         String information = "Cpu'da calisan proses: " + Constants.workingOnCpu + "\n"
-                + this.getProcessOnQueue(this.queueModel.readQueue, "Ready kuyrugu") + "\n"
-                + this.getProcessOnQueue(this.queueModel.screenQueue, "Ekran kuyrugu") + "\n"
-                + this.getProcessOnQueue(this.queueModel.diskQueue, "Disk kuyrugu") + "\n"
-                + this.getProcessOnQueue(this.queueModel.ethernetQueue, "Ethernet kuyrugu")
-                + "\nPCB'si bulunan Prosesler " + currentPCBs;
+                + this.getProcessOnQueue(this.queueModel.readQueue, "Ready kuyrugu:") + "\n"
+                + this.getProcessOnQueue(this.queueModel.screenQueue, "Ekran kuyrugu:") + "\n"
+                + this.getProcessOnQueue(this.queueModel.diskQueue, "Disk kuyrugu:") + "\n"
+                + this.getProcessOnQueue(this.queueModel.ethernetQueue, "Ethernet kuyrugu:")
+                + "\nPCB'si bulunan Prosesler: " + currentPCBs;
 
         System.out.println(information);
     }

@@ -50,9 +50,19 @@ public class Main {
 
         }
 
-        Cpu cpu = new Cpu(programModels, eventModels, queueModel, 20, "A.exe");
+        try (Scanner scanner = new Scanner(System.in)) {
+            System.out.print("\nLutfen sistemin durumu gormek isrediginiz saniyeyi giriniz.: ");
+            int stopTIme = scanner.nextInt();
+            scanner.nextLine();
+            System.out.print(
+                    "\n" + stopTIme + ". saniyededeki PCB'sini goruntulemek istediginiz proses ismini giriniz.: ");
+            String targetProcess = scanner.nextLine();
+            System.out.println("\n ");
 
-        cpu.start();
+            Cpu cpu = new Cpu(programModels, eventModels, queueModel, stopTIme, targetProcess);
+            cpu.start();
+
+        }
 
     }
 

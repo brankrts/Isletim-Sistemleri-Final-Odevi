@@ -66,7 +66,7 @@ public class PCB {
         if (isNotSlice) {
 
             while (this.commandCount >= this.programCounter & Constants.isSystemActive) {
-                Constants.workingOnCpu = this.getProcessName();
+
                 this.isNotSlice = this.timeSlice == 5 ? false : true;
                 if (this.isNotSlice == false) {
                     this.readyQueue.push(this);
@@ -74,10 +74,6 @@ public class PCB {
                     Constants.isContinue = false;
                     break;
                 }
-                Thread.sleep(1000);
-                this.incrementCpuUsage();
-                this.incrementProgramCounter();
-                this.incrementTimeSlice();
 
                 if (this.getProcessName().equals("A.exe")) {
                     System.out.println("\n\n************************************************************");
@@ -90,6 +86,7 @@ public class PCB {
                     if (subProcess.getSubProcessActivateTime() == this.getCpuUsage()) {
                         PcpThread subprocessThread = new PcpThread(
                                 () -> {
+
                                     this.subProcessQueue.pop();
                                     this.queueMap.get(subProcess.getSubProcessName()).push(this);
                                     this.processStatus = StatusEnum.Waiting;
@@ -106,20 +103,16 @@ public class PCB {
                                 });
                         subprocessThread.start();
                         Constants.isContinue = false;
-
                         Constants.workingOnCpu = "";
                         break;
                     }
 
                 }
 
-                this.isNotSlice = this.timeSlice == 5 ? false : true;
-                if (this.isNotSlice == false) {
-                    this.readyQueue.push(this);
-                    this.timeSlice = 0;
-                    Constants.isContinue = false;
-                    break;
-                }
+                Thread.sleep(1000);
+                this.incrementCpuUsage();
+                this.incrementProgramCounter();
+                this.incrementTimeSlice();
 
                 Constants.isContinue = true;
 
